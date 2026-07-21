@@ -39,7 +39,14 @@
           }
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "O FreeFlex usa suas fotos para enviar os documentos exigidos no cadastro.",
+          "cameraPermission": "O FreeFlex usa a câmera para fotografar os documentos exigidos no cadastro."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

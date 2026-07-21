@@ -13,15 +13,17 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaskedInput } from '@/components/MaskedInput';
+import { DocumentPickerField } from '@/components/DocumentPickerField';
 import { useCEP } from '@/hooks/useCEP';
 import { maskCEP, maskCNPJ, maskPhone, unmask } from '@/utils/masks';
 import { validateCNPJ, validateEmail, validatePhone } from '@/utils/validators';
+import { PickedFile, appendFileToFormData } from '@/utils/upload';
 import { api, ApiError } from '@/services/api';
 
 const TEAL = '#5BBCAD';
 const ORANGE = '#E8603C';
 
-type Step = 1 | 2;
+type Step = 1 | 2 | 3;
 
 interface FormData {
   nome_fantasia: string;
@@ -54,6 +56,9 @@ export default function RegisterEmpresaScreen() {
   const [errors, setErrors] = useState<Errors>({});
   const [loading, setLoading] = useState(false);
 
+  const [cartaoCnpj, setCartaoCnpj] = useState<PickedFile | null>(null);
+  const [docError, setDocError] = useState<string | undefined>();
+
   const { lookup: lookupCEP, loading: cepLoading, error: cepError } = useCEP((address) => {
     setForm((prev) => ({ ...prev, ...address }));
   });
@@ -75,7 +80,7 @@ export default function RegisterEmpresaScreen() {
     return Object.keys(errs).length === 0;
   }
 
-  async function handleSubmit() {
+  function validateStep2(): boolean {
     const errs: Errors = {};
     if (unmask(form.cep).length !== 8) errs.cep = 'CEP inválido.';
     if (!form.endereco.trim()) errs.endereco = 'Informe o endereço.';
@@ -83,8 +88,20 @@ export default function RegisterEmpresaScreen() {
     if (!form.bairro.trim()) errs.bairro = 'Informe o bairro.';
     if (!form.cidade.trim()) errs.cidade = 'Informe a cidade.';
     if (form.estado.length !== 2) errs.estado = 'UF inválida (2 letras).';
-    if (Object.keys(errs).length > 0) { setErrors(errs); return; }
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  }
 
+  function validateStep3(): boolean {
+    if (!cartaoCnpj) {
+      setDocError('Envie a foto do Cartão CNPJ.');
+      return false;
+    }
+    setDocError(undefined);
+    return true;
+  }
+
+  async function handleSubmit() {
     setLoading(true);
     try {
       const data = new FormData();
@@ -101,6 +118,7 @@ export default function RegisterEmpresaScreen() {
       data.append('bairro', form.bairro);
       data.append('cidade', form.cidade);
       data.append('estado', form.estado);
+      if (cartaoCnpj) await appendFileToFormData(data, 'cartao_cnpj', cartaoCnpj);
       await api.registerEmpresa(data);
       Alert.alert(
         'Cadastro enviado!',
@@ -118,7 +136,8 @@ export default function RegisterEmpresaScreen() {
 
   function handleNext() {
     if (step === 1 && validateStep1()) setStep(2);
-    else if (step === 2) handleSubmit();
+    else if (step === 2 && validateStep2()) setStep(3);
+    else if (step === 3 && validateStep3()) handleSubmit();
   }
 
   return (
@@ -127,7 +146,7 @@ export default function RegisterEmpresaScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => (step > 1 ? setStep(1) : router.back())}>
+        <TouchableOpacity onPress={() => (step > 1 ? setStep((s) => (s - 1) as Step) : router.back())}>
           <Text style={styles.backArrow}>↩</Text>
         </TouchableOpacity>
       </View>
@@ -137,7 +156,7 @@ export default function RegisterEmpresaScreen() {
         <View style={styles.cardHeader}>
           <Text style={styles.cardTitle}>Sou Empresa</Text>
           <View style={styles.stepRow}>
-            {([1, 2] as Step[]).map((s) => (
+            {([1, 2, 3] as Step[]).map((s) => (
               <View key={s} style={[styles.stepDot, step >= s && styles.stepDotActive]} />
             ))}
           </View>
@@ -182,6 +201,17 @@ export default function RegisterEmpresaScreen() {
               <MaskedInput placeholder="Estado (UF)" value={form.estado} onChangeText={(v) => set('estado', v.toUpperCase().slice(0, 2))} error={errors.estado} autoCapitalize="characters" maxLength={2} />
             </>
           )}
+
+          {step === 3 && (
+            <>
+              <Text style={styles.infoText}>
+                Envie uma foto do Cartão CNPJ para validarmos sua empresa.
+              </Text>
+              <View style={styles.docRow}>
+                <DocumentPickerField label="Foto do Cartão CNPJ" value={cartaoCnpj} onChange={setCartaoCnpj} error={docError} />
+              </View>
+            </>
+          )}
         </ScrollView>
 
         {/* Botão fixo no rodapé */}
@@ -193,7 +223,7 @@ export default function RegisterEmpresaScreen() {
           >
             {loading
               ? <ActivityIndicator color="#fff" />
-              : <Text style={styles.btnOrangeText}>{step === 2 ? 'Registrar' : 'Próximo'}</Text>
+              : <Text style={styles.btnOrangeText}>{step === 3 ? 'Registrar' : 'Próximo'}</Text>
             }
           </TouchableOpacity>
         </View>
@@ -242,4 +272,6 @@ const styles = StyleSheet.create({
   },
   btnDisabled: { opacity: 0.7 },
   btnOrangeText: { color: '#fff', fontSize: 17, fontWeight: '700' },
+  infoText: { color: '#fff', fontSize: 14, lineHeight: 22, marginBottom: 16, textAlign: 'center' },
+  docRow: { flexDirection: 'row', gap: 12, flexWrap: 'wrap' },
 });

@@ -13,15 +13,17 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaskedInput } from '@/components/MaskedInput';
+import { DocumentPickerField } from '@/components/DocumentPickerField';
 import { useCEP } from '@/hooks/useCEP';
 import { maskCEP, maskCPF, maskPhone, unmask } from '@/utils/masks';
 import { validateCPF, validateEmail, validatePhone } from '@/utils/validators';
+import { PickedFile, appendFileToFormData } from '@/utils/upload';
 import { api, ApiError } from '@/services/api';
 
 const TEAL = '#5BBCAD';
 const ORANGE = '#E8603C';
 
-type Step = 1 | 2 | 3;
+type Step = 1 | 2 | 3 | 4;
 
 interface FormData {
   nome: string;
@@ -53,6 +55,14 @@ export default function RegisterPrestadorScreen() {
   const [form, setForm] = useState<FormData>(INITIAL);
   const [errors, setErrors] = useState<Errors>({});
   const [loading, setLoading] = useState(false);
+
+  const [temCnh, setTemCnh] = useState<boolean | null>(null);
+  const [cnhDigital, setCnhDigital] = useState(false);
+  const [rgFrente, setRgFrente] = useState<PickedFile | null>(null);
+  const [rgVerso, setRgVerso] = useState<PickedFile | null>(null);
+  const [cnhFrente, setCnhFrente] = useState<PickedFile | null>(null);
+  const [cnhVerso, setCnhVerso] = useState<PickedFile | null>(null);
+  const [docErrors, setDocErrors] = useState<Record<string, string>>({});
 
   const { lookup: lookupCEP, loading: cepLoading, error: cepError } = useCEP((address) => {
     setForm((prev) => ({ ...prev, ...address }));
@@ -87,6 +97,20 @@ export default function RegisterPrestadorScreen() {
     return Object.keys(errs).length === 0;
   }
 
+  function validateStep3(): boolean {
+    const errs: Record<string, string> = {};
+    if (temCnh === null) errs.temCnh = 'Informe se você possui CNH.';
+    if (temCnh === false) {
+      if (!rgFrente) errs.rgFrente = 'Envie a foto da frente do RG.';
+      if (!rgVerso) errs.rgVerso = 'Envie a foto do verso do RG.';
+    } else if (temCnh === true) {
+      if (!cnhFrente) errs.cnhFrente = 'Envie a foto da CNH.';
+      if (!cnhDigital && !cnhVerso) errs.cnhVerso = 'Envie a foto do verso da CNH.';
+    }
+    setDocErrors(errs);
+    return Object.keys(errs).length === 0;
+  }
+
   async function handleSubmit() {
     setLoading(true);
     try {
@@ -104,6 +128,17 @@ export default function RegisterPrestadorScreen() {
       data.append('bairro', form.bairro);
       data.append('cidade', form.cidade);
       data.append('estado', form.estado);
+      data.append('tem_cnh', temCnh ? '1' : '0');
+      data.append('cnh_digital', cnhDigital ? '1' : '0');
+
+      if (temCnh) {
+        if (cnhFrente) await appendFileToFormData(data, 'cnh_frente', cnhFrente);
+        if (!cnhDigital && cnhVerso) await appendFileToFormData(data, 'cnh_verso', cnhVerso);
+      } else {
+        if (rgFrente) await appendFileToFormData(data, 'rg_frente', rgFrente);
+        if (rgVerso) await appendFileToFormData(data, 'rg_verso', rgVerso);
+      }
+
       await api.registerPrestador(data);
       Alert.alert(
         'Cadastro enviado!',
@@ -122,7 +157,8 @@ export default function RegisterPrestadorScreen() {
   function handleNext() {
     if (step === 1 && validateStep1()) setStep(2);
     else if (step === 2 && validateStep2()) setStep(3);
-    else if (step === 3) handleSubmit();
+    else if (step === 3 && validateStep3()) setStep(4);
+    else if (step === 4) handleSubmit();
   }
 
   return (
@@ -141,7 +177,7 @@ export default function RegisterPrestadorScreen() {
         <View style={styles.cardHeader}>
           <Text style={styles.cardTitle}>Sou Prestador</Text>
           <View style={styles.stepRow}>
-            {([1, 2, 3] as Step[]).map((s) => (
+            {([1, 2, 3, 4] as Step[]).map((s) => (
               <View key={s} style={[styles.stepDot, step >= s && styles.stepDotActive]} />
             ))}
           </View>
@@ -189,9 +225,54 @@ export default function RegisterPrestadorScreen() {
 
           {step === 3 && (
             <>
+              <Text style={styles.infoText}>Você possui CNH?</Text>
+              <View style={styles.choiceRow}>
+                <TouchableOpacity
+                  style={[styles.choiceBtn, temCnh === true && styles.choiceBtnActive]}
+                  onPress={() => setTemCnh(true)}
+                >
+                  <Text style={[styles.choiceBtnText, temCnh === true && styles.choiceBtnTextActive]}>Sim</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.choiceBtn, temCnh === false && styles.choiceBtnActive]}
+                  onPress={() => setTemCnh(false)}
+                >
+                  <Text style={[styles.choiceBtnText, temCnh === false && styles.choiceBtnTextActive]}>Não</Text>
+                </TouchableOpacity>
+              </View>
+              {docErrors.temCnh && <Text style={styles.errorTextDoc}>{docErrors.temCnh}</Text>}
+
+              {temCnh === true && (
+                <>
+                  <TouchableOpacity
+                    style={styles.checkboxRow}
+                    onPress={() => setCnhDigital((v) => !v)}
+                  >
+                    <View style={[styles.checkbox, cnhDigital && styles.checkboxChecked]} />
+                    <Text style={styles.checkboxLabel}>Minha CNH é digital (formato PDF, sem verso)</Text>
+                  </TouchableOpacity>
+                  <View style={styles.docRow}>
+                    <DocumentPickerField label="Foto da CNH (frente)" value={cnhFrente} onChange={setCnhFrente} error={docErrors.cnhFrente} />
+                    {!cnhDigital && (
+                      <DocumentPickerField label="Foto da CNH (verso)" value={cnhVerso} onChange={setCnhVerso} error={docErrors.cnhVerso} />
+                    )}
+                  </View>
+                </>
+              )}
+
+              {temCnh === false && (
+                <View style={styles.docRow}>
+                  <DocumentPickerField label="Foto do RG (frente)" value={rgFrente} onChange={setRgFrente} error={docErrors.rgFrente} />
+                  <DocumentPickerField label="Foto do RG (verso)" value={rgVerso} onChange={setRgVerso} error={docErrors.rgVerso} />
+                </View>
+              )}
+            </>
+          )}
+
+          {step === 4 && (
+            <>
               <Text style={styles.infoText}>
-                Após o cadastro, nossa equipe irá verificar seus documentos (RG, CNH).
-                Você poderá enviá-los pelo site ou app após a aprovação inicial.
+                Confira seus dados antes de enviar. Após o cadastro, nossa equipe irá analisar seus documentos.
               </Text>
               <Text style={styles.infoText}>
                 Você será notificado por e-mail quando sua conta for aprovada.
@@ -209,7 +290,7 @@ export default function RegisterPrestadorScreen() {
           >
             {loading
               ? <ActivityIndicator color="#fff" />
-              : <Text style={styles.btnOrangeText}>{step === 3 ? 'Registrar' : 'Próximo'}</Text>
+              : <Text style={styles.btnOrangeText}>{step === 4 ? 'Registrar' : 'Próximo'}</Text>
             }
           </TouchableOpacity>
         </View>
@@ -259,4 +340,29 @@ const styles = StyleSheet.create({
   btnDisabled: { opacity: 0.7 },
   btnOrangeText: { color: '#fff', fontSize: 17, fontWeight: '700' },
   infoText: { color: '#fff', fontSize: 14, lineHeight: 22, marginBottom: 16, textAlign: 'center' },
+  choiceRow: { flexDirection: 'row', gap: 12, marginBottom: 8 },
+  choiceBtn: {
+    flex: 1,
+    borderWidth: 2,
+    borderColor: '#fff',
+    borderRadius: 30,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  choiceBtnActive: { backgroundColor: ORANGE, borderColor: ORANGE },
+  choiceBtnText: { color: '#fff', fontWeight: '700' },
+  choiceBtnTextActive: { color: '#fff' },
+  errorTextDoc: { color: '#ffdddd', fontSize: 12, marginBottom: 8, textAlign: 'center' },
+  checkboxRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8, marginBottom: 14 },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: '#fff',
+    marginRight: 10,
+  },
+  checkboxChecked: { backgroundColor: ORANGE, borderColor: ORANGE },
+  checkboxLabel: { color: '#fff', fontSize: 13, flex: 1 },
+  docRow: { flexDirection: 'row', gap: 12, flexWrap: 'wrap' },
 });

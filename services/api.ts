@@ -74,6 +74,102 @@ export interface ApiError {
   errors?: Record<string, string[]>;
 }
 
+export interface AgendamentoPrestador {
+  id: number;
+  data: string;
+  hora_inicio: string;
+  hora_fim: string;
+  demanda_titulo: string | null;
+  servico: string | null;
+  empresa: string | null;
+}
+
+export interface PropostaPrestador {
+  id: number;
+  status: string;
+  mensagem: string | null;
+  criado_em: string;
+  demanda: {
+    id: number;
+    titulo: string;
+    data: string;
+    hora_inicio: string;
+    hora_fim: string;
+    servico: string | null;
+  } | null;
+}
+
+export interface DemandaDisponivel {
+  id: number;
+  titulo: string;
+  data: string;
+  hora_inicio: string;
+  hora_fim: string;
+  servico: string | null;
+  valor_hora: string | null;
+  empresa: string | null;
+}
+
+export interface PrestadorDashboard {
+  provider: { id: number; nome: string; status_aprovacao: string };
+  stats: {
+    proposals_sent: number;
+    proposals_pending: number;
+    scheduled: number;
+    avg_rating: number | null;
+    ratings_count: number;
+  };
+  proximos_agendamentos: AgendamentoPrestador[];
+  propostas_recentes: PropostaPrestador[];
+  demandas_disponiveis: DemandaDisponivel[];
+}
+
+export interface DemandaEmpresa {
+  id: number;
+  titulo: string;
+  data: string;
+  hora_inicio: string;
+  hora_fim: string;
+  vagas_necessarias: number;
+  vagas_confirmadas: number;
+  status: string;
+  servico: string | null;
+  propostas_count: number;
+  agendamentos_count: number;
+}
+
+export interface AgendamentoEmpresa {
+  id: number;
+  data: string;
+  hora_inicio: string;
+  hora_fim: string;
+  demanda_titulo: string | null;
+  prestador: string | null;
+  prestador_telefone: string | null;
+}
+
+export interface PropostaPendenteEmpresa {
+  id: number;
+  mensagem: string | null;
+  criado_em: string;
+  prestador: string | null;
+  demanda_id: number;
+  demanda_titulo: string | null;
+}
+
+export interface EmpresaDashboard {
+  company: { id: number; nome: string; status_aprovacao: string };
+  stats: {
+    open_demands: number;
+    pending_proposals: number;
+    scheduled: number;
+    completed: number;
+  };
+  demandas_recentes: DemandaEmpresa[];
+  proximos_agendamentos: AgendamentoEmpresa[];
+  propostas_pendentes: PropostaPendenteEmpresa[];
+}
+
 async function request<T>(
   method: string,
   path: string,
@@ -129,4 +225,22 @@ export const api = {
 
   registerEmpresa: (data: FormData) =>
     request<{ message: string }>('POST', '/register/empresa', data),
+
+  dashboardPrestador: () =>
+    request<PrestadorDashboard>('GET', '/prestador/dashboard', undefined, true),
+
+  aceitarConvitePrestador: (proposalId: number) =>
+    request<{ message: string }>('POST', `/prestador/propostas/${proposalId}/aceitar`, undefined, true),
+
+  recusarConvitePrestador: (proposalId: number) =>
+    request<{ message: string }>('POST', `/prestador/propostas/${proposalId}/recusar`, undefined, true),
+
+  dashboardEmpresa: () =>
+    request<EmpresaDashboard>('GET', '/empresa/dashboard', undefined, true),
+
+  aceitarPropostaEmpresa: (proposalId: number) =>
+    request<{ message: string }>('POST', `/empresa/propostas/${proposalId}/aceitar`, undefined, true),
+
+  rejeitarPropostaEmpresa: (proposalId: number) =>
+    request<{ message: string }>('POST', `/empresa/propostas/${proposalId}/rejeitar`, undefined, true),
 };

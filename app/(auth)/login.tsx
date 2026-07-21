@@ -8,7 +8,7 @@ import { MaskedInput } from '@/components/MaskedInput';
 import { useAuth } from '@/contexts/AuthContext';
 import { ApiError } from '@/services/api';
 
-const TEAL = '#5BBCAD';
+const TEAL = '#84d3c7';
 const ORANGE = '#E8603C';
 
 export default function LoginScreen() {

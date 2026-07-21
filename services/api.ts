@@ -26,13 +26,10 @@ const storage = {
   },
 };
 
-// No browser de desenvolvimento, o backend fica em localhost:8000.
-// Em emulador Android, use http://10.0.2.2:8000/api.
-// Em dispositivo físico, use http://SEU_IP_LOCAL:8000/api.
-const BASE_URL =
+export const BASE_URL =
   Platform.OS === 'web'
     ? 'http://localhost:8000/api'
-    : 'http://10.0.2.2:8000/api';
+    : 'http://192.168.0.221:8000/api'; // IP da máquina na rede local
 
 const TOKEN_KEY = 'freeflex_token';
 const USER_KEY = 'freeflex_user';

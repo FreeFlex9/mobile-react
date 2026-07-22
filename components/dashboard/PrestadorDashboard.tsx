@@ -1,7 +1,6 @@
 import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -9,16 +8,18 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { Href, useFocusEffect, useRouter } from 'expo-router';
 import { StatCard } from './StatCard';
 import { StatusBanner } from './StatusBanner';
 import { api, ApiError, PrestadorDashboard as PrestadorDashboardData } from '@/services/api';
 import { formatCurrency, formatDate, formatTime } from '@/utils/format';
+import { alert } from '@/utils/alert';
 
 const TEAL = '#5BBCAD';
 const ORANGE = '#E8603C';
 
 export function PrestadorDashboard() {
+  const router = useRouter();
   const [data, setData] = useState<PrestadorDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -31,7 +32,7 @@ export function PrestadorDashboard() {
       setData(res);
     } catch (err) {
       const e = err as ApiError;
-      Alert.alert('Erro', e.message ?? 'Não foi possível carregar o dashboard.');
+      alert('Erro', e.message ?? 'Não foi possível carregar o dashboard.');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -52,7 +53,7 @@ export function PrestadorDashboard() {
       await load(false);
     } catch (err) {
       const e = err as ApiError;
-      Alert.alert('Erro', e.message);
+      alert('Erro', e.message);
     } finally {
       setActionLoadingId(null);
     }
@@ -86,25 +87,25 @@ export function PrestadorDashboard() {
         <StatCard label="Avaliação média" value={data.stats.avg_rating ?? '—'} />
       </View>
 
-      <Text style={styles.sectionTitle}>Próximos agendamentos</Text>
+      <SectionHeader title="Próximos agendamentos" onSeeAll={() => router.push('/agenda' as Href)} />
       {data.proximos_agendamentos.length === 0 ? (
         <Text style={styles.emptyText}>Nenhum agendamento futuro.</Text>
       ) : (
         data.proximos_agendamentos.map((a) => (
-          <View key={a.id} style={styles.itemCard}>
+          <TouchableOpacity key={a.id} style={styles.itemCard} onPress={() => router.push('/agenda' as Href)}>
             <Text style={styles.itemTitle}>{a.demanda_titulo}</Text>
             <Text style={styles.itemSubtitle}>{a.empresa} · {a.servico}</Text>
             <Text style={styles.itemMeta}>{formatDate(a.data)} · {formatTime(a.hora_inicio)}–{formatTime(a.hora_fim)}</Text>
-          </View>
+          </TouchableOpacity>
         ))
       )}
 
-      <Text style={styles.sectionTitle}>Propostas recentes</Text>
+      <SectionHeader title="Propostas recentes" onSeeAll={() => router.push('/propostas' as Href)} />
       {data.propostas_recentes.length === 0 ? (
         <Text style={styles.emptyText}>Você ainda não enviou propostas.</Text>
       ) : (
         data.propostas_recentes.map((p) => (
-          <View key={p.id} style={styles.itemCard}>
+          <TouchableOpacity key={p.id} style={styles.itemCard} onPress={() => router.push('/propostas' as Href)} activeOpacity={0.7}>
             <View style={styles.itemHeader}>
               <Text style={styles.itemTitle}>{p.demanda?.titulo ?? 'Demanda removida'}</Text>
               <StatusPill status={p.status} />
@@ -132,23 +133,38 @@ export function PrestadorDashboard() {
                 </TouchableOpacity>
               </View>
             )}
-          </View>
+          </TouchableOpacity>
         ))
       )}
 
-      <Text style={styles.sectionTitle}>Demandas disponíveis</Text>
+      <SectionHeader title="Demandas disponíveis" onSeeAll={() => router.push('/demandas' as Href)} />
       {data.demandas_disponiveis.length === 0 ? (
         <Text style={styles.emptyText}>Nenhuma demanda disponível no momento.</Text>
       ) : (
         data.demandas_disponiveis.map((d) => (
-          <View key={d.id} style={styles.itemCard}>
+          <TouchableOpacity key={d.id} style={styles.itemCard} onPress={() => router.push(`/demandas/${d.id}` as Href)}>
             <Text style={styles.itemTitle}>{d.titulo}</Text>
             <Text style={styles.itemSubtitle}>{d.empresa} · {d.servico}</Text>
             <Text style={styles.itemMeta}>{formatDate(d.data)} · {formatTime(d.hora_inicio)}–{formatTime(d.hora_fim)} · {formatCurrency(d.valor_hora)}/h</Text>
-          </View>
+          </TouchableOpacity>
         ))
       )}
+
+      <TouchableOpacity style={styles.browseBtn} onPress={() => router.push('/demandas' as Href)}>
+        <Text style={styles.browseBtnText}>Buscar mais demandas</Text>
+      </TouchableOpacity>
     </ScrollView>
+  );
+}
+
+function SectionHeader({ title, onSeeAll }: { title: string; onSeeAll: () => void }) {
+  return (
+    <View style={styles.sectionHeader}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      <TouchableOpacity onPress={onSeeAll}>
+        <Text style={styles.seeAllText}>Ver todas</Text>
+      </TouchableOpacity>
+    </View>
   );
 }
 
@@ -176,7 +192,15 @@ const styles = StyleSheet.create({
   content: { padding: 20, paddingBottom: 40 },
   greeting: { fontSize: 22, fontWeight: '700', color: '#222', marginBottom: 12 },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 8 },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#222', marginTop: 24, marginBottom: 10 },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 24,
+    marginBottom: 10,
+  },
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#222' },
+  seeAllText: { fontSize: 12, color: TEAL, fontWeight: '700' },
   emptyText: { fontSize: 13, color: '#888' },
   itemCard: {
     backgroundColor: '#fff',
@@ -200,4 +224,12 @@ const styles = StyleSheet.create({
   actionBtnOutlineText: { color: ORANGE, fontWeight: '700', fontSize: 13 },
   actionBtnFilled: { backgroundColor: ORANGE },
   actionBtnFilledText: { color: '#fff', fontWeight: '700', fontSize: 13 },
+  browseBtn: {
+    marginTop: 24,
+    backgroundColor: ORANGE,
+    borderRadius: 30,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  browseBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
 });

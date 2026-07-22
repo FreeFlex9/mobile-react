@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -19,6 +18,7 @@ import { maskCEP, maskCPF, maskPhone, unmask } from '@/utils/masks';
 import { validateCPF, validateEmail, validatePhone } from '@/utils/validators';
 import { PickedFile, appendFileToFormData } from '@/utils/upload';
 import { api, ApiError } from '@/services/api';
+import { alert } from '@/utils/alert';
 
 const TEAL = '#5BBCAD';
 const ORANGE = '#E8603C';
@@ -140,7 +140,7 @@ export default function RegisterPrestadorScreen() {
       }
 
       await api.registerPrestador(data);
-      Alert.alert(
+      alert(
         'Cadastro enviado!',
         'Seu cadastro foi recebido e está em análise. Você será notificado por e-mail após a aprovação.',
         [{ text: 'OK', onPress: () => router.replace('/(auth)/login') }],
@@ -148,7 +148,7 @@ export default function RegisterPrestadorScreen() {
     } catch (err) {
       const e = err as ApiError;
       const detail = e.errors ? Object.values(e.errors).flat().join('\n') : e.message;
-      Alert.alert('Erro no cadastro', detail);
+      alert('Erro no cadastro', detail);
     } finally {
       setLoading(false);
     }

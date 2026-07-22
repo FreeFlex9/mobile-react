@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Image,
+import { ActivityIndicator, Image,
   KeyboardAvoidingView, Platform, Pressable, ScrollView,
   StyleSheet, Text, TouchableOpacity, View, } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaskedInput } from '@/components/MaskedInput';
 import { useAuth } from '@/contexts/AuthContext';
 import { ApiError } from '@/services/api';
+import { alert } from '@/utils/alert';
 
 const TEAL = '#84d3c7';
 const ORANGE = '#E8603C';
@@ -22,7 +23,7 @@ export default function LoginScreen() {
 
   async function handleLogin() {
     if (!loginInput.trim() || !senha.trim()) {
-      Alert.alert('Atenção', 'Preencha e-mail/CPF/CNPJ e senha.');
+      alert('Atenção', 'Preencha e-mail/CPF/CNPJ e senha.');
       return;
     }
     setLoading(true);
@@ -31,7 +32,7 @@ export default function LoginScreen() {
       router.replace('/(tabs)');
     } catch (err) {
       const e = err as ApiError;
-      Alert.alert('Erro ao entrar', e.message);
+      alert('Erro ao entrar', e.message);
     } finally {
       setLoading(false);
     }

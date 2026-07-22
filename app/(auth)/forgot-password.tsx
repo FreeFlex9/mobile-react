@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -15,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaskedInput } from '@/components/MaskedInput';
 import { validateEmail } from '@/utils/validators';
 import { BASE_URL } from '@/services/api';
+import { alert } from '@/utils/alert';
 
 const TEAL = '#5BBCAD';
 const ORANGE = '#E8603C';
@@ -34,7 +34,7 @@ export default function ForgotPasswordScreen() {
 
   async function handleSendCode() {
     if (!validateEmail(email)) {
-      Alert.alert('Atenção', 'Informe um e-mail válido.');
+      alert('Atenção', 'Informe um e-mail válido.');
       return;
     }
     setLoading(true);
@@ -49,11 +49,11 @@ export default function ForgotPasswordScreen() {
         ? `${json.message}\n\n[DEV] Código: ${json.debug_code}`
         : json.message;
       if (json.debug_code) setCode(json.debug_code);
-      Alert.alert('Código enviado', msg, [
+      alert('Código enviado', msg, [
         { text: 'OK', onPress: () => setStep('code') },
       ]);
     } catch {
-      Alert.alert('Erro', 'Não foi possível conectar ao servidor.');
+      alert('Erro', 'Não foi possível conectar ao servidor.');
     } finally {
       setLoading(false);
     }
@@ -61,15 +61,15 @@ export default function ForgotPasswordScreen() {
 
   async function handleReset() {
     if (code.length !== 6) {
-      Alert.alert('Atenção', 'O código deve ter 6 dígitos.');
+      alert('Atenção', 'O código deve ter 6 dígitos.');
       return;
     }
     if (senha.length < 8) {
-      Alert.alert('Atenção', 'A senha deve ter pelo menos 8 caracteres.');
+      alert('Atenção', 'A senha deve ter pelo menos 8 caracteres.');
       return;
     }
     if (senha !== senhaConfirmation) {
-      Alert.alert('Atenção', 'As senhas não coincidem.');
+      alert('Atenção', 'As senhas não coincidem.');
       return;
     }
     setLoading(true);
@@ -81,14 +81,14 @@ export default function ForgotPasswordScreen() {
       });
       const json = await res.json();
       if (!res.ok) {
-        Alert.alert('Erro', json.message ?? 'Código inválido ou expirado.');
+        alert('Erro', json.message ?? 'Código inválido ou expirado.');
         return;
       }
-      Alert.alert('Sucesso!', json.message, [
+      alert('Sucesso!', json.message, [
         { text: 'Fazer login', onPress: () => router.replace('/(auth)/login') },
       ]);
     } catch {
-      Alert.alert('Erro', 'Não foi possível conectar ao servidor.');
+      alert('Erro', 'Não foi possível conectar ao servidor.');
     } finally {
       setLoading(false);
     }

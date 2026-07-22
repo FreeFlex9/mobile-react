@@ -1,7 +1,6 @@
 import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -14,6 +13,7 @@ import { StatCard } from './StatCard';
 import { StatusBanner } from './StatusBanner';
 import { api, ApiError, EmpresaDashboard as EmpresaDashboardData } from '@/services/api';
 import { formatDate, formatTime } from '@/utils/format';
+import { alert } from '@/utils/alert';
 
 const TEAL = '#5BBCAD';
 const ORANGE = '#E8603C';
@@ -31,7 +31,7 @@ export function EmpresaDashboard() {
       setData(res);
     } catch (err) {
       const e = err as ApiError;
-      Alert.alert('Erro', e.message ?? 'Não foi possível carregar o dashboard.');
+      alert('Erro', e.message ?? 'Não foi possível carregar o dashboard.');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -52,7 +52,7 @@ export function EmpresaDashboard() {
       await load(false);
     } catch (err) {
       const e = err as ApiError;
-      Alert.alert('Erro', e.message);
+      alert('Erro', e.message);
     } finally {
       setActionLoadingId(null);
     }

@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -19,6 +18,7 @@ import { maskCEP, maskCNPJ, maskPhone, unmask } from '@/utils/masks';
 import { validateCNPJ, validateEmail, validatePhone } from '@/utils/validators';
 import { PickedFile, appendFileToFormData } from '@/utils/upload';
 import { api, ApiError } from '@/services/api';
+import { alert } from '@/utils/alert';
 
 const TEAL = '#5BBCAD';
 const ORANGE = '#E8603C';
@@ -120,7 +120,7 @@ export default function RegisterEmpresaScreen() {
       data.append('estado', form.estado);
       if (cartaoCnpj) await appendFileToFormData(data, 'cartao_cnpj', cartaoCnpj);
       await api.registerEmpresa(data);
-      Alert.alert(
+      alert(
         'Cadastro enviado!',
         'Sua empresa foi cadastrada e está aguardando aprovação. Você será notificado por e-mail.',
         [{ text: 'OK', onPress: () => router.replace('/(auth)/login') }],
@@ -128,7 +128,7 @@ export default function RegisterEmpresaScreen() {
     } catch (err) {
       const e = err as ApiError;
       const detail = e.errors ? Object.values(e.errors).flat().join('\n') : e.message;
-      Alert.alert('Erro no cadastro', detail);
+      alert('Erro no cadastro', detail);
     } finally {
       setLoading(false);
     }

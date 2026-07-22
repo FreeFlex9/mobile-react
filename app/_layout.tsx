@@ -30,6 +30,10 @@ function RootNavigator() {
     <Stack>
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="demandas/index" options={{ headerShown: false }} />
+      <Stack.Screen name="demandas/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="propostas/index" options={{ headerShown: false }} />
+      <Stack.Screen name="agenda/index" options={{ headerShown: false }} />
       <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
     </Stack>
   );
